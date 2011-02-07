@@ -1,0 +1,37 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<beans xmlns="http://www.springframework.org/schema/beans"
+	xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+	xmlns:context="http://www.springframework.org/schema/context"
+	xmlns:int="http://www.springframework.org/schema/integration"
+	xsi:schemaLocation="http://www.springframework.org/schema/integration http://www.springframework.org/schema/integration/spring-integration-2.0.xsd
+		http://www.springframework.org/schema/beans http://www.springframework.org/schema/beans/spring-beans.xsd
+		http://www.springframework.org/schema/context http://www.springframework.org/schema/context/spring-context-3.0.xsd">
+
+	<context:property-placeholder location="classpath*:META-INF/*.properties"/>
+	<context:annotation-config/>
+	
+	<context:component-scan base-package="de.mpg.mis.neuesbibliothekssystem.remote.rabbit">
+		<context:exclude-filter type="assignable" expression="de.mpg.mis.neuesbibliothekssystem.remote.rabbit.config.server.ServerAMQPConfig"/>
+	</context:component-scan>
+		
+	<import resource="channels.xml"/>
+	<import resource="handlers.xml"/>
+	
+	<int:outbound-channel-adapter ref="amqpOutboundGateway" channel="dbmasterToRemoteChannel"/>
+	<bean id="amqpOutboundGateway" class="de.mpg.mis.neuesbibliothekssystem.dbendpoint.messaging.gateways.AMQPOutboundGateway">
+		<property name="connectionFactory" ref="connectionFactory"/>
+		<property name="messageConverter" ref="jsonMessageConverter"/>
+		<property name="routingKey" value="${DBMaster.activemq.requestQueue}"/>
+	</bean>
+	
+	<bean id="amqpInboundGateway" class="de.mpg.mis.neuesbibliothekssystem.dbendpoint.messaging.gateways.AMQPInboundGateway">
+		<property name="connectionFactory" ref="connectionFactory"/>
+		<property name="messageConverter" ref="jsonMessageConverter"/>
+		<property name="queueName" value="#{doActualQueue.name}"/>
+		<property name="concurrentConsumers" value="5" />
+		<property name="requestChannel" ref="dbmasterIUDChannel"/>
+	</bean>
+	
+	<bean id="client" class="de.mpg.mis.neuesbibliothekssystem.remoting.rabbit.stub.Client"/>
+
+</beans>
